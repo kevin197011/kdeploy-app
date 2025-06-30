@@ -1,0 +1,29 @@
+# Server inventory configuration
+groups:
+  production:
+    hosts:
+      - hostname: app1.example.com
+        roles: [app, web]
+        user: deploy
+        port: 22
+      - hostname: app2.example.com
+        roles: [app, web]
+        user: deploy
+        port: 22
+      - hostname: db.example.com
+        roles: [db]
+        user: deploy
+        port: 22
+        vars:
+          db_name: production_db
+          db_user: app_user
+
+  staging:
+    hosts:
+      - hostname: staging.example.com
+        roles: [app, web, db]
+        user: deploy
+        port: 22
+        vars:
+          rails_env: staging
+          node_env: staging

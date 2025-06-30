@@ -1,0 +1,38 @@
+#!/bin/bash
+# Deployment script for <%= app_name %>
+
+set -e
+
+APP_ROOT="/var/www/<%= app_name %>"
+CURRENT="$APP_ROOT/current"
+SHARED="$APP_ROOT/shared"
+RELEASE="$APP_ROOT/releases/$(date +%Y%m%d%H%M%S)"
+
+echo "Deploying <%= app_name %> to $RELEASE"
+
+# Create release directory
+mkdir -p $RELEASE
+
+# Clone repository
+git clone <%= repository_url %> $RELEASE
+
+# Install dependencies
+cd $RELEASE
+bundle install --deployment --without development test
+yarn install --production
+
+# Compile assets
+bundle exec rake assets:precompile RAILS_ENV=production
+
+# Create symlinks
+ln -s $SHARED/config/database.yml $RELEASE/config/database.yml
+ln -s $SHARED/config/master.key $RELEASE/config/master.key
+ln -s $SHARED/public/uploads $RELEASE/public/uploads
+
+# Update current symlink
+ln -sfn $RELEASE $CURRENT
+
+# Restart application
+sudo systemctl restart <%= app_name %>
+
+echo "Deployment completed successfully!"
