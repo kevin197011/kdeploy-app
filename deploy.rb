@@ -1,43 +1,35 @@
 # frozen_string_literal: true
 
-# Main deployment script
-pipeline 'main' do
-  # Define target hosts
-  host 'app1.example.com', roles: [:app, :web]
-  host 'app2.example.com', roles: [:app, :web]
-  host 'db.example.com', roles: [:db]
+# Define hosts
+host 'web01', user: 'root', ip: '10.1.1.2', key: '~/.ssh/id_rsa'
 
-  # Set global variables
-  set :app_name, 'my_app'
-  set :deploy_to, '/var/www/${app_name}'
-  set :keep_releases, 5
+# Define roles
+role :web, %w[web01]
 
-  # Define tasks
-  task :check_requirements do
-    run 'ruby -v'
-    run 'node -v'
-    run 'git --version'
-  end
 
-  task :setup_directories do
-    run "mkdir -p ${deploy_to}"
-    run "mkdir -p ${deploy_to}/releases"
-    run "mkdir -p ${deploy_to}/shared"
-  end
 
-  task :deploy do
-    depends_on :check_requirements, :setup_directories
+# Define deployment task for web servers
+task :deploy_web, roles: :web do
+  # Stop service
+  run 'free -m'
 
-    run 'git clone https://github.com/user/repo.git ${deploy_to}/releases/$(date +%Y%m%d%H%M%S)'
-    run 'ln -sfn ${deploy_to}/releases/$(ls -t ${deploy_to}/releases | head -n1) ${deploy_to}/current'
-  end
+  # Upload configuration using ERB template
+  upload_template './config/nginx.conf.erb', '/tmp/nginx.conf',
+    domain_name: 'example.com',
+    port: 3000,
+    worker_processes: 4,
+    worker_connections: 2048
 
-  task :restart_services do
-    run 'sudo systemctl restart nginx'
-    run 'sudo systemctl restart app'
-  end
+  # Upload static configuration
 
-  task :cleanup do
-    run "cd ${deploy_to}/releases && ls -t | tail -n +${keep_releases + 1} | xargs rm -rf"
-  end
+  # Restart service
+  run <<~SHELL
+    ls -l /tmp/nginx.conf
+    cat /tmp/nginx.conf
+  SHELL
+
+  # Check status
+  run 'uptime'
 end
+
+
